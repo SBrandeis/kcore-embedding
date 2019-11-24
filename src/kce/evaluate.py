@@ -12,7 +12,7 @@ def pre_process(graph: nx.Graph):
     return graph
 
 
-def node_classification_pipeline(graph, embedder: Embedder, test_size=0.6):
+def node_classification_pipeline(graph, embedder: Embedder, classifier, test_size=0.6):
     embedding_results = embedder.embed(graph)
 
     X = embedding_results["vectors"]
@@ -20,13 +20,12 @@ def node_classification_pipeline(graph, embedder: Embedder, test_size=0.6):
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size)
 
-    model = LogisticRegression(penalty='l1', solver="lbfgs", multi_class="ovr")
-    model.fit(X_train, Y_train)
-    y_pred = model.predict(X_test)
+    classifier.fit(X_train, Y_train)
+    y_pred = classifier.predict(X_test)
     y_true = Y_test
 
     return {
-        "embedding_result": embedding_results,
+        **embedding_results,
         "micro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="micro"),
         "macro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="macro")
     }

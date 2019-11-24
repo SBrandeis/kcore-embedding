@@ -34,17 +34,16 @@ class DeepWalk(Embedder):
         start_rw_gen = time.time()
         walks = self._generate_walks(graph)
         np.random.shuffle(walks)
-        rw_gen_time = time.time() - start_rw_gen
+        end_rw_gen = time.time()
 
         # Compute the embedding by training Word2Vec
-        start_embed_train = time.time()
         wv = self._skip_gram(walks)
-        embed_train_time = time.time() - start_embed_train
+        end_embed_train_time = time.time()
 
         return {
             "n_walks": len(walks),
             "vectors": wv.vectors,
             "node_index": wv.index2word,
-            "rw_gen_time": rw_gen_time,
-            "embed_train_time": embed_train_time
+            "rw_gen_time": end_rw_gen - start_rw_gen,
+            "embed_train_time": end_embed_train_time - end_rw_gen
         }
