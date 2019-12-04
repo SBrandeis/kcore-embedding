@@ -27,12 +27,13 @@ class CoreWalk(DeepWalk):
 
 class CoreWalkLinear(CoreWalk):
 
-    def __init__(self, coef=1, *args, **kwargs):
+    def __init__(self, offset=0, n_min=1, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.coef_ = coef
+        self.offset_ = offset
+        self.n_min_ = n_min
 
     def _n_walks(self, k, k_max):
-        return max(int(self.coef_ * (k - k_max) + self.n_walks_), 1)
+        return max(int((self.n_walks_ - self.offset_) * (k / k_max) + self.offset_), self.n_min_)
 
 
 class CoreWalkPower(CoreWalk):
