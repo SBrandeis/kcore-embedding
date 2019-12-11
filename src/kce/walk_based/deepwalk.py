@@ -1,5 +1,7 @@
 from networkx import Graph
 import numpy as np
+import multiprocessing as mp
+from itertools import repeat
 import time
 from gensim.models import Word2Vec
 
@@ -23,10 +25,15 @@ class DeepWalk(Embedder):
         return model.wv
 
     def _generate_walks(self, graph: Graph):
-        walks = []
-        for i in range(self.n_walks_):
-            for node in graph:
-                walks.append(generate_rw(graph, node, self.walk_length_))
+        pool = mp.Pool()
+        nodes = list(graph) * self.n_walks_
+
+        res = pool.starmap_async(func=generate_rw,
+                                 iterable=zip(repeat(graph),
+                                              nodes,
+                                              repeat(self.walk_length_)))
+        pool.close()
+        walks = res.get()
         return walks
 
     def embed(self, graph: Graph):

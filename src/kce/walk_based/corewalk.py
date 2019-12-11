@@ -1,6 +1,7 @@
 from networkx import Graph, core_number
 import numpy as np
-from gensim.models import Word2Vec
+import multiprocessing as mp
+from itertools import repeat
 
 from .walks import generate_rw
 from ..embedder import Embedder
@@ -13,15 +14,19 @@ class CoreWalk(DeepWalk):
         raise NotImplementedError
 
     def _generate_walks(self, graph: Graph):
+        pool = mp.Pool()
         core_numbers = core_number(graph)
         k_max = max(core_numbers.values())
         k_n_walks = [self._n_walks(k, k_max) for k in range(1, k_max + 1)]
-        walks = []
-        for node in graph:
-            k = core_numbers[node]
-            n_walks = k_n_walks[k-1]
-            for i in range(n_walks):
-                walks.append(generate_rw(graph, node, self.walk_length_))
+
+        nodes = [node for node in graph for _ in range(k_n_walks[core_numbers[node]-1])]
+
+        res = pool.starmap_async(func=generate_rw,
+                                 iterable=zip(repeat(graph),
+                                              nodes,
+                                              repeat(self.walk_length_)))
+        pool.close()
+        walks = res.get()
         return walks
 
 
