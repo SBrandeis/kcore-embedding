@@ -5,6 +5,7 @@ from itertools import repeat
 import time
 from gensim.models import Word2Vec
 
+from ...utils import timeit
 from .walks import generate_rw
 from kce.embedders.embedder import Embedder
 
@@ -13,44 +14,50 @@ class DeepWalk(Embedder):
 
     def __init__(self, out_dim, n_walks, walk_length, win_size, *args, **kwargs):
         super().__init__(out_dim, *args, **kwargs)
-        self.n_walks_ = n_walks
-        self.walk_length_ = walk_length
-        self.win_size_ = win_size
+        self.n_generated_walks = None
+        self.n_walks = n_walks
+        self.walk_length = walk_length
+        self.win_size = win_size
 
+    def get_attributes(self):
+        return {
+            **super().get_attributes(),
+            "n_walks": self.n_walks,
+            "walk_length": self.walk_length,
+            "window_size": self.win_size,
+            "n_generated_walks": self.n_generated_walks
+        }
+
+    @timeit(var_name="skip_gram")
     def _skip_gram(self, walks):
         model = Word2Vec(walks,
                          size=self.out_dim_,
-                         window=self.win_size_,
+                         window=self.win_size,
                          min_count=0, sg=1, hs=1)
         return model.wv
 
+    @timeit(var_name="generate_walks")
     def _generate_walks(self, graph: Graph):
-        pool = mp.Pool()
-        nodes = list(graph) * self.n_walks_
-
-        res = pool.starmap_async(func=generate_rw,
-                                 iterable=zip(repeat(graph),
-                                              nodes,
-                                              repeat(self.walk_length_)))
-        pool.close()
-        walks = res.get()
+        nodes = list(graph) * self.n_walks
+        with mp.Pool() as pool:
+            res = pool.starmap_async(func=generate_rw,
+                                     iterable=zip(repeat(graph),
+                                                  nodes,
+                                                  repeat(self.walk_length)))
+            walks = res.get()
         return walks
 
-    def embed(self, graph: Graph):
+    def fit(self, graph: Graph, **kwargs):
         # Generate random walks
-        start_rw_gen = time.time()
         walks = self._generate_walks(graph)
         np.random.shuffle(walks)
-        end_rw_gen = time.time()
 
         # Compute the embedding by training Word2Vec
         wv = self._skip_gram(walks)
-        end_embed_train_time = time.time()
 
-        return {
-            "n_walks": len(walks),
-            "vectors": wv.vectors,
-            "node_index": wv.index2word,
-            "rw_gen_time": end_rw_gen - start_rw_gen,
-            "embed_train_time": end_embed_train_time - end_rw_gen
-        }
+        self.n_generated_walks = len(walks)
+        self.embeddings = wv.vectors
+        self.id2node = list(wv.index2word)
+        self.node2id = {word: index for index, word in enumerate(wv.index2word)}
+
+        return self

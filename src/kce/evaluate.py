@@ -11,11 +11,13 @@ def pre_process(graph: nx.Graph):
     return graph
 
 
-def node_classification_pipeline(graph, embedder: Embedder, classifier, test_size=0.6):
-    embedding_results = embedder.embed(graph)
+def node_classification_pipeline(graph, embedder: Embedder, classifier, embed_kwargs=None, test_size=0.6):
+    if not embed_kwargs:
+        embed_kwargs = {}
+    embedder.fit(graph, **embed_kwargs)
 
-    X = embedding_results["vectors"]
-    Y = np.array([graph.nodes[word]["community"] for word in embedding_results["node_index"]])
+    X = embedder.embeddings
+    Y = np.array([graph.nodes[word]["community"] for word in embedder.id2node])
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size)
 
@@ -23,8 +25,9 @@ def node_classification_pipeline(graph, embedder: Embedder, classifier, test_siz
     y_pred = classifier.predict(X_test)
     y_true = Y_test
 
+
     return {
-        **embedding_results,
+        **embedder.get_attributes(),
         "micro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="micro"),
         "macro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="macro")
     }
