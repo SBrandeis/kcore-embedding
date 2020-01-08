@@ -6,7 +6,7 @@ import time
 from gensim.models import Word2Vec
 
 from .walks import generate_rw
-from ..embedder import Embedder
+from kce.embedders.embedder import Embedder
 
 
 class DeepWalk(Embedder):

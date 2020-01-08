@@ -4,7 +4,6 @@ import multiprocessing as mp
 from itertools import repeat
 
 from .walks import generate_rw
-from ..embedder import Embedder
 from .deepwalk import DeepWalk
 
 

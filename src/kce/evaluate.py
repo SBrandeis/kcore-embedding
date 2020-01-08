@@ -2,8 +2,7 @@ import networkx as nx
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
-from sklearn.linear_model import LogisticRegression
-from .embedder import Embedder
+from kce.embedders.embedder import Embedder
 
 
 def pre_process(graph: nx.Graph):

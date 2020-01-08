@@ -1,8 +1,7 @@
 import argparse
 import csv
 from os import path
-from kce.walk_based.deepwalk import DeepWalk
-from kce.walk_based.corewalk import CoreWalkLinear
+from kce.embedders import DeepWalk, CoreWalkLinear
 from kce.evaluate import node_classification_pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
