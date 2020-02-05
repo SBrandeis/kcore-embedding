@@ -100,7 +100,6 @@ if __name__ == '__main__':
 
     cfg_path = args.config
     tag = args.tag or '0'
-    link_pred = args.link_pred
 
     if cfg_path:
         cfg = load_config(cfg_path)
@@ -110,6 +109,7 @@ if __name__ == '__main__':
         reps = cfg["reps"]
         base_embedder = cfg["base_embedder"]
         target_embedder = cfg["target_embedder"]
+        link_pred = cfg["link_pred"]
 
     else:
         input_path = args.input
@@ -117,6 +117,7 @@ if __name__ == '__main__':
         reps = args.reps
         base_embedder = args.base
         target_embedder = args.target
+        link_pred = args.link_pred
 
     assert path.exists(input_path)
     assert path.exists(output_dir)
