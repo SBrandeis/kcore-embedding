@@ -2,7 +2,7 @@ import argparse
 import csv
 from os import path
 from kce.embedders import DeepWalk, CoreWalkLinear
-from kce.evaluate import node_classification_pipeline
+from kce.evaluate import node_classification_pipeline, link_prediction_pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from tqdm import tqdm
@@ -10,7 +10,7 @@ import networkx as nx
 
 
 def instantiate_classifier(multilabel=False):
-    reglog = LogisticRegression(C=1, multi_class="ovr", solver="lbfgs")
+    reglog = LogisticRegression(C=1, multi_class="ovr", solver="liblinear")
     if multilabel:
         return OneVsRestClassifier(reglog)
     return reglog
@@ -59,25 +59,25 @@ if __name__ == '__main__':
             dw = DeepWalk(**params)
             cw = CoreWalkLinear(**params)
 
-            res_dw = node_classification_pipeline(graph=G,
+            res_dw = link_prediction_pipeline(graph=G,
                                                   embedder=dw,
                                                   classifier=instantiate_classifier(multilabel))
             deepwalk_results.append(res_dw)
 
-            res_cw = node_classification_pipeline(graph=G,
+            res_cw = link_prediction_pipeline(graph=G,
                                                   embedder=cw,
                                                   classifier=instantiate_classifier(multilabel))
             corewalk_results.append(res_cw)
     finally:
         input_name = path.split(input_path)[1].split('.')[0]
         fieldnames = corewalk_results[0].keys()
-        with open(path.join(output_dir, input_name + '_cw.csv'), 'w+') as fout:
+        with open(path.join(output_dir, input_name + '_cw_link_pred.csv'), 'w+') as fout:
             writer = csv.DictWriter(fout, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(corewalk_results)
 
         fieldnames = deepwalk_results[0].keys()
-        with open(path.join(output_dir, input_name + '_dw.csv'), 'w+') as fout:
+        with open(path.join(output_dir, input_name + '_dw_link_pred.csv'), 'w+') as fout:
             writer = csv.DictWriter(fout, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(deepwalk_results)
