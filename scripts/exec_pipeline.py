@@ -176,22 +176,25 @@ if __name__ == '__main__':
             res_base = node_classification_pipeline(graph=G,
                                                     embedder=base,
                                                     classifier=instantiate_classifier(multilabel))
-            # Store the result
-            base_embeddings.append({
-                "embeddings": res_base.pop("embeddings"),
-                "node2id": res_base.pop("node2id"),
-                "id2node": res_base.pop("id2node")
-            })
+
+            with open(path.join(output_path, "embeddings", "embeddings_base_{}.pkl".format(r)), "wb+") as fout:
+                pickle.dump({
+                    "embeddings": res_base.pop("embeddings"),
+                    "node2id": res_base.pop("node2id"),
+                    "id2node": res_base.pop("id2node")
+                }, fout)
             base_metrics.append(res_base)
 
             res_target = node_classification_pipeline(graph=G,
                                                       embedder=target,
                                                       classifier=instantiate_classifier(multilabel))
-            target_embeddings.append({
-                "embeddings": res_target.pop("embeddings"),
-                "node2id": res_target.pop("node2id"),
-                "id2node": res_target.pop("id2node")
-            })
+
+            with open(path.join(output_path, "embeddings", "embeddings_target_{}.pkl".format(r)), "wb+") as fout:
+                pickle.dump({
+                    "embeddings": res_target.pop("embeddings"),
+                    "node2id": res_target.pop("node2id"),
+                    "id2node": res_target.pop("id2node")
+                }, fout)
             target_metrics.append(res_target)
 
     finally:
@@ -207,12 +210,3 @@ if __name__ == '__main__':
             writer = csv.DictWriter(fout, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(target_metrics)
-
-        # Pickle embeddings
-        for idx, embedding in enumerate(base_embeddings):
-            with open(path.join(output_path, "embeddings", "embeddings_base_{}.pkl".format(idx)), "wb+") as fout:
-                pickle.dump(embedding, fout)
-
-        for idx, embedding in enumerate(target_embeddings):
-            with open(path.join(output_path, "embeddings", "embeddings_target_{}.pkl".format(idx)), "wb+") as fout:
-                pickle.dump(embedding, fout)
