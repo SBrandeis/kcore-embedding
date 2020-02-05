@@ -1,0 +1,7 @@
+{
+  "input_path": "../data/cora.gml",
+  "output_dir": "../output",
+  "reps": 3,
+  "base_embedder": "deepwalk",
+  "target_embedder": "corewalk_linear"
+}
