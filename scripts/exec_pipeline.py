@@ -11,7 +11,7 @@ import csv
 from datetime import datetime
 from importlib import import_module
 import json
-from kce.evaluate import node_classification_pipeline
+from kce.evaluate import node_classification_pipeline, link_prediction_pipeline
 import networkx as nx
 from os import path, mkdir
 import pickle
@@ -91,6 +91,8 @@ parser.add_argument('--base-params', metavar='base_params', type=str,
                     help='Path to the .json file containing params foir the base embedder.')
 parser.add_argument('--target-params', metavar='target_params', type=str,
                     help='Path to the .json file containing params for the target embedder.')
+parser.add_argument('--link-pred', metavar='link_pred', type=bool, default=False,
+                    help='whether to perform Link prediction instead of node classification.')
 
 if __name__ == '__main__':
     # Parse arguments
@@ -98,6 +100,7 @@ if __name__ == '__main__':
 
     cfg_path = args.config
     tag = args.tag or '0'
+    link_pred = args.link_pred
 
     if cfg_path:
         cfg = load_config(cfg_path)
@@ -151,8 +154,11 @@ if __name__ == '__main__':
             "output_dir": output_dir,
             "reps": reps,
             "base_embedder": base_embedder,
-            "target_embedder": target_embedder
+            "target_embedder": target_embedder,
+            "link_pred": link_pred
         }, fout)
+
+    pipeline = link_prediction_pipeline if link_pred else node_classification_pipeline
 
     # Import and preprocess the graph
     G: nx.Graph = nx.read_gml(input_path)
@@ -173,9 +179,9 @@ if __name__ == '__main__':
             target = target_class(**target_params)
 
             # Execute classification pipeline
-            res_base = node_classification_pipeline(graph=G,
-                                                    embedder=base,
-                                                    classifier=instantiate_classifier(multilabel))
+            res_base = pipeline(graph=G,
+                                embedder=base,
+                                classifier=instantiate_classifier(multilabel))
 
             with open(path.join(output_path, "embeddings", "embeddings_base_{}.pkl".format(r)), "wb+") as fout:
                 pickle.dump({
@@ -185,9 +191,9 @@ if __name__ == '__main__':
                 }, fout)
             base_metrics.append(res_base)
 
-            res_target = node_classification_pipeline(graph=G,
-                                                      embedder=target,
-                                                      classifier=instantiate_classifier(multilabel))
+            res_target = pipeline(graph=G,
+                                  embedder=target,
+                                  classifier=instantiate_classifier(multilabel))
 
             with open(path.join(output_path, "embeddings", "embeddings_target_{}.pkl".format(r)), "wb+") as fout:
                 pickle.dump({
