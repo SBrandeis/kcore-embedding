@@ -3,6 +3,6 @@
   "output_dir": "../output",
   "reps": 3,
   "base_embedder": "deepwalk",
-  "target_embedder": "corewalk_linear",
+  "target_embedder": "k_core",
   "link_pred": false
 }
