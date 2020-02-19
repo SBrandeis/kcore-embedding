@@ -25,6 +25,7 @@ AVAILABLE_EMBEDDERS = {
     "corewalk_linear": ("kce.embedders.walk_based.corewalk", "CoreWalkLinear"),
     "corewalk_power": ("kce.embedders.walk_based.corewalk", "CoreWalkPower"),
     "corewalk_sigmoid": ("kce.embedders.walk_based.corewalk", "CoreWalkSigmoid"),
+    "k_core" : ("kce.frameworks.k_core", "KCore")
 }
 
 
@@ -144,6 +145,8 @@ if __name__ == '__main__':
     target_params_path = args.target_params
     base_params = load_config(base_params_path)
     target_params = load_config(target_params_path)
+    base_train_params = base_params.pop("train", None)
+    target_train_params = target_params.pop("train", None)
 
     with open(path.join(output_path, "base_params.json"), "w+") as fout:
         json.dump(base_params, fout)
@@ -177,12 +180,16 @@ if __name__ == '__main__':
         for r in tqdm(range(reps)):
             # Instantiate Embedders
             base = base_class(**base_params)
+            if "kce.frameworks" in target_module[0]:
+                target_params["embedder"] = base
             target = target_class(**target_params)
+
 
             # Execute classification pipeline
             res_base = pipeline(graph=G,
                                 embedder=base,
-                                classifier=instantiate_classifier(multilabel))
+                                classifier=instantiate_classifier(multilabel),
+                                embed_kwargs=base_train_params)
 
             with open(path.join(output_path, "embeddings", "embeddings_base_{}.pkl".format(r)), "wb+") as fout:
                 pickle.dump({
@@ -194,7 +201,8 @@ if __name__ == '__main__':
 
             res_target = pipeline(graph=G,
                                   embedder=target,
-                                  classifier=instantiate_classifier(multilabel))
+                                  classifier=instantiate_classifier(multilabel),
+                                  embed_kwargs=target_train_params)
 
             with open(path.join(output_path, "embeddings", "embeddings_target_{}.pkl".format(r)), "wb+") as fout:
                 pickle.dump({
