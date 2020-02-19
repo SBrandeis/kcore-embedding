@@ -48,9 +48,8 @@ class KCore(Framework):
             reachable_indexes = [i for i, node in enumerate(graph) if node in reachable_nodes]
             embedded_indexes = [i for i, node in enumerate(graph) if node in embedded_sub_graph]
             A1, A2 = sparse_adj[embedded_indexes, :][:, reachable_indexes], sparse_adj[reachable_indexes, :][:, reachable_indexes]
-            # norm = sparse.csc_matrix(sparse.hstack([A1.T, A2]).sum(axis=1)) # TODO: sum is breaking sparcity : fix it
             norm = sparse.hstack([A1.T, A2]).sum(axis=1)
-            A1_norm, A2_norm = A1/norm.T, A2/norm.T
+            A1_norm, A2_norm = sparse.csc_matrix(A1/norm.T), sparse.csc_matrix(A2/norm.T)
             Z2 = sparse.csr_matrix(np.random.uniform(-1, 1, size=(reachable_nodes.order(), self.out_dim_)))
             for itr in range(max_itr):
                 Z2 = A1_norm.T@Z1 + A2_norm.T@Z2
@@ -77,7 +76,7 @@ class KCore(Framework):
                 n1 = n1 + 1
 
         return {
-            "embeddings": embeddings,
+            "embeddings": np.array(embeddings),
             "node2id": node2id,
             "id2node": id2node,
             "unreachable_nodes": unreachable_nodes

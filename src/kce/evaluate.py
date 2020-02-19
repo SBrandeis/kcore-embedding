@@ -46,7 +46,6 @@ def link_prediction_pipeline(graph, embedder: Embedder, classifier, embed_kwargs
     [_graph.remove_edge(u, v) for u, v in edges_cut]
 
     # Create embedding
-
     if not embed_kwargs:
         embed_kwargs = {}
     embedder.fit(_graph, **embed_kwargs)
