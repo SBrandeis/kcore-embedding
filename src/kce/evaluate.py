@@ -2,8 +2,10 @@ import networkx as nx
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, accuracy_score
+from sklearn.base import BaseEstimator
 from kce.embedders.embedder import Embedder
 from copy import deepcopy
+
 
 def pre_process(graph: nx.Graph):
     graph.remove_edges_from(nx.selfloop_edges(graph))
@@ -11,22 +13,19 @@ def pre_process(graph: nx.Graph):
     return graph
 
 
-def node_classification_pipeline(graph, embedder: Embedder, classifier, embed_kwargs=None, test_size=0.6):
-    if not embed_kwargs:
-        embed_kwargs = {}
-    embedder.fit(graph, **embed_kwargs)
+def node_classification_pipeline(graph: nx.Graph, embeddings: np.ndarray, id2node: list, classifier: BaseEstimator,
+                                 test_size=0.6, ) -> dict[str, float]:
+    node_vectors = embeddings
+    labels = np.array([graph.nodes[word]["community"] for word in id2node])
 
-    X = embedder.embeddings
-    Y = np.array([graph.nodes[word]["community"] for word in embedder.id2node])
+    node_vectors_train, node_vectors_test, labels_train, labels_test = train_test_split(node_vectors, labels,
+                                                                                        test_size=test_size)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size)
-
-    classifier.fit(X_train, Y_train)
-    y_pred = classifier.predict(X_test)
-    y_true = Y_test
+    classifier.fit(node_vectors_train, labels_train)
+    y_pred = classifier.predict(node_vectors_test)
+    y_true = labels_test
 
     return {
-        **embedder.get_attributes(),
         "micro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="micro"),
         "macro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="macro")
     }
