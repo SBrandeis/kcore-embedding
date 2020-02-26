@@ -8,21 +8,20 @@ Outputs are:
 """
 import argparse
 import csv
+import json
+import logging
+import pickle
 from datetime import datetime
 from importlib import import_module
-import json
-from kce.evaluate import node_classification_pipeline, link_prediction_pipeline
-import logging
-import networkx as nx
 from os import path, mkdir
-import pickle
+
+import networkx as nx
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from tqdm import tqdm
+
+from kce.evaluate import node_classification_pipeline, link_prediction_pipeline
 from kce.utils import preprocess, downstream_specific_preprocessing
-
-
-logger = logging.getLogger()
 
 AVAILABLE_EMBEDDERS = {
     "deepwalk": ("kce.embedders.walk_based.deepwalk", "DeepWalk"),
@@ -89,6 +88,8 @@ def main(args):
         log_level = logging.INFO
     else:
         log_level = logging.DEBUG
+    logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
 
     logger.info("Loading config...")
