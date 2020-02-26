@@ -19,6 +19,7 @@ import pickle
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from tqdm import tqdm
+from kce.utils import preprocess, downstream_specific_preprocessing
 
 
 logger = logging.getLogger()
@@ -69,14 +70,13 @@ def instantiate_classifier(multilabel=False):
 def instantiate_embedder(name, params, sub_embedder_name=None, sub_embedder_params=None):
     embedder_module = AVAILABLE_EMBEDDERS[name]
     if "kce.frameworks" in embedder_module[0]:
-        assert sub_embedder_name is str
-        assert sub_embedder_params is dict
+        assert isinstance(sub_embedder_name, str)
+        assert isinstance(sub_embedder_params, dict)
         sub_embedder = instantiate_embedder(name=sub_embedder_name, params=sub_embedder_params)
         params["embedder"] = sub_embedder
     embedder_class = getattr(import_module(embedder_module[0]), embedder_module[1])
     embedder = embedder_class(**params)
     return embedder
-
 
 def main(args):
     error_code = 0
@@ -159,15 +159,17 @@ def main(args):
 
     train_params = embedder_params.pop("train", None)
 
-    downstream_task = link_prediction_pipeline if link_pred else node_classification_pipeline
+    downstream_task, downstream_task_name = (link_prediction_pipeline, "link_prediction") if link_pred else \
+        (node_classification_pipeline, "node_classification")
+
 
     # Import and preprocess the graph
     logger.info("Loading graph...")
     graph: nx.Graph = nx.read_gml(input_path)
 
     logger.debug("Preprocessing graph")
-    graph.remove_edges_from(nx.selfloop_edges(graph))  # Remove self-loops
-    graph = nx.k_core(graph, 1)  # Remove orphan nodes
+    isolated, selfloop = preprocess(graph) # Preprocessing inplace to reduce memory usage
+    logger.debug("Preprocessing: removing {} isolated nodes and {} selfloop edges".format(len(list(isolated)), len(list(selfloop))))
     logger.debug("Graph successfully loaded and preprocessed")
 
     multilabel = isinstance(list(graph.nodes(data="community"))[0][1], list)
@@ -185,14 +187,20 @@ def main(args):
         else:
             reps_iter = range(reps)
         for r in reps_iter:
-            logger.info("Preprocessing graph...")
-            graph_ = preprocess(graph)
             embedder = instantiate_embedder(name=embedder_name, params=embedder_params,
                                             sub_embedder_name=sub_embedder_name, sub_embedder_params=sub_embedder_params)
+
+            logger.info("Task specific preprocessing.. ")
+            graph_, preprocessing_dict = downstream_specific_preprocessing(graph,
+                                                                           downstream_task_name=downstream_task_name,
+                                                                           **downstream_task_args)
+            downstream_task_args.update(**preprocessing_dict)
 
             logger.info("Fitting embedder...")
             embedder.fit(graph_, **train_params)
             logger.debug("Done.")
+            # Create embedding
+
             embedding_results = embedder.get_attributes()
             embeddings = embedding_results.pop("embeddings")
             id2node = embedding_results.pop("id2node")
@@ -209,7 +217,7 @@ def main(args):
 
             logger.info("Classify with base embeddings...")
             embedding_results.update(
-                downstream_task(graph=graph, embeddings=embeddings, id2node=id2node,
+                downstream_task(graph=graph, embeddings=embeddings, id2node=id2node, node2id=node2id,
                                 classifier=instantiate_classifier(multilabel),
                                 **downstream_task_args)
             )

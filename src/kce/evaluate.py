@@ -5,6 +5,7 @@ from sklearn.metrics import f1_score, accuracy_score
 from sklearn.base import BaseEstimator
 from kce.embedders.embedder import Embedder
 from copy import deepcopy
+from kce.utils import link_pred_train_test_split
 
 
 def pre_process(graph: nx.Graph):
@@ -13,8 +14,10 @@ def pre_process(graph: nx.Graph):
     return graph
 
 
-def node_classification_pipeline(graph: nx.Graph, embeddings: np.ndarray, id2node: list, classifier: BaseEstimator,
-                                 test_size=0.6, ) -> dict[str, float]:
+def node_classification_pipeline(graph: nx.Graph, embeddings: np.ndarray, id2node: list, node2id: list, classifier: BaseEstimator,
+                                 **kwargs) -> dict:
+    test_size = kwargs["test_size"]
+
     node_vectors = embeddings
     labels = np.array([graph.nodes[word]["community"] for word in id2node])
 
@@ -31,7 +34,24 @@ def node_classification_pipeline(graph: nx.Graph, embeddings: np.ndarray, id2nod
     }
 
 
-def link_prediction_pipeline(graph, embedder: Embedder, classifier, embed_kwargs=None, cut_ratio=.5, test_size=.6):
+def link_prediction_pipeline(graph: nx.Graph, embeddings: np.array, id2node: list, node2id: list, classifier: BaseEstimator,
+                            **kwargs) -> dict:
+    non_edges_train, non_edges_test, edges_train, edges_test = kwargs["non_edges_train"], kwargs["non_edges_test"],\
+                                                               kwargs["edges_train"], kwargs["edges_test"]
+    X_train, X_test, Y_train, Y_test = link_pred_train_test_split(embeddings, node2id, **kwargs)
+
+    # Classify
+    classifier.fit(X_train, Y_train)
+    y_pred = classifier.predict(X_test)
+    y_true = Y_test
+
+    return {
+        "micro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="micro"),
+        "macro_f1": f1_score(y_true=y_true, y_pred=y_pred, average="macro"),
+        "accuracy": accuracy_score(y_true=y_true, y_pred=y_pred)
+    }
+
+def link_prediction_pipeline_old(graph, embedder: Embedder, classifier, embed_kwargs=None, cut_ratio=.5, test_size=.6):
 
     # Select edges to cut
     index_cut = np.random.choice(graph.number_of_edges(), size=int(graph.number_of_edges()*cut_ratio), replace=False)
