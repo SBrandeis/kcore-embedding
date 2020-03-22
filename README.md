@@ -4,6 +4,10 @@
 
 After cloning, create your virtual environment, then :
 
+```
+cd k-core-embedding/
+```
+
 **Running multiple experiments**
 
 ```
