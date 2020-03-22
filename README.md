@@ -9,7 +9,7 @@ After cloning, create your virtual environment, then :
 ```
 pip install -r requirements.txt
 python setup.py install
-sh multi_exp.sh
+sh multi_exp.sh <graph>
 ```
 
 **Running single experiment**
