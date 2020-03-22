@@ -4,6 +4,7 @@ import numpy as np
 from copy import deepcopy
 import pickle
 from os import path
+import random
 
 def timeit(var_name):
     def wrapper(func):
@@ -40,13 +41,28 @@ def downstream_specific_preprocessing(graph: nx.Graph, downstream_task_name, **d
                                      replace=False)
         edges = np.array(list(graph.edges))
         nb_edges = edges.shape[0]
-        non_edges = list(nx.non_edges(graph))
+
+        # Find nodes not connected, same number as number of true edges
+        def get_non_edges(graph):
+            non_edges = set()
+            nodes = graph.nodes()
+            while len(non_edges) < nb_edges:
+                u, v = random.sample(nodes, 2)
+                if not (graph.has_edge(u, v) or graph.has_edge(v, u)):
+                    non_edges.add((u, v))
+            return non_edges
+
+        # Using saved non edges if possible, since heavy computation
         if graph_non_edges and path.isfile(graph_non_edges):
             with open(graph_non_edges, 'rb') as f:
                 non_edges = pickle.load(f)
         elif graph_non_edges:
+            non_edges = list(get_non_edges(graph))
             with open(graph_non_edges, "wb") as f:
                 pickle.dump(non_edges, f)
+        else:
+            non_edges = list(get_non_edges(graph))
+
         non_edges = np.array(non_edges)
         edges_cut = edges[index_cut]
 
@@ -55,7 +71,8 @@ def downstream_specific_preprocessing(graph: nx.Graph, downstream_task_name, **d
         _graph.remove_edges_from(edges_cut)
 
         # Create train set : select pairs of nodes not connected
-        index_neg = np.random.choice(non_edges.shape[0], size=nb_edges)
+        index_neg = np.arange(nb_edges)
+        np.random.shuffle(index_neg)
         index_train_neg, index_test_neg = index_neg[:-int(nb_edges * test_size)], index_neg[-int(nb_edges * test_size):]
         non_edges_train, non_edges_test = non_edges[index_train_neg], non_edges[index_test_neg]
         index_pos = np.arange(nb_edges)
