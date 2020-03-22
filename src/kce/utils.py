@@ -2,7 +2,8 @@ import time
 import networkx as nx
 import numpy as np
 from copy import deepcopy
-
+import pickle
+from os import path
 
 def timeit(var_name):
     def wrapper(func):
@@ -31,7 +32,7 @@ def downstream_specific_preprocessing(graph: nx.Graph, downstream_task_name, **d
     if downstream_task_name == "node_classification":
         return graph, {}
     elif downstream_task_name == "link_prediction":
-        cut_ratio, test_size = downstream_task_args["cut_ratio"], downstream_task_args["test_size"]
+        cut_ratio, test_size, graph_non_edges = downstream_task_args["cut_ratio"], downstream_task_args["test_size"], downstream_task_args["graph_non_edges"]
 
         # Coarsen graph
         # Select edges to cut
@@ -39,12 +40,19 @@ def downstream_specific_preprocessing(graph: nx.Graph, downstream_task_name, **d
                                      replace=False)
         edges = np.array(list(graph.edges))
         nb_edges = edges.shape[0]
-        non_edges = np.array(list(nx.non_edges(graph)))
+        non_edges = list(nx.non_edges(graph))
+        if graph_non_edges and path.isfile(graph_non_edges):
+            with open(graph_non_edges, 'rb') as f:
+                non_edges = pickle.load(f)
+        elif graph_non_edges:
+            with open(graph_non_edges, "wb") as f:
+                pickle.dump(non_edges, f)
+        non_edges = np.array(non_edges)
         edges_cut = edges[index_cut]
 
         # Remove those edges from graph
         _graph = deepcopy(graph)
-        [_graph.remove_edge(u, v) for u, v in edges_cut] # use TODO: graph.remove_edges_from(list) if faster
+        _graph.remove_edges_from(edges_cut)
 
         # Create train set : select pairs of nodes not connected
         index_neg = np.random.choice(non_edges.shape[0], size=nb_edges)

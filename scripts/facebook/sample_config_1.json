@@ -1,0 +1,14 @@
+{
+  "input_path": "../data/facebook_4000.gml",
+  "output_dir": "../output/facebook_4000_experiments",
+  "reps": 3,
+  "embedder": "k_core",
+  "sub_embedder": "deepwalk",
+  "link_pred": true,
+  "save_embedding": false,
+  "downstream_task_args": {
+    "test_size": 0.6,
+    "cut_ratio": 0.1,
+    "graph_non_edges": "../data/facebook_4000_non_edges.pickle"
+  }
+}

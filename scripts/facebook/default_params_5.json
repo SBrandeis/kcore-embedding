@@ -1,0 +1,11 @@
+{
+  "n_walks": 15,
+  "out_dim": 150,
+  "walk_length": 30,
+  "win_size": 5,
+
+  "train": {
+    "core_index":100
+  }
+}
+

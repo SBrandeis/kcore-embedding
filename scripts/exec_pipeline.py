@@ -13,7 +13,7 @@ import logging
 import pickle
 from datetime import datetime
 from importlib import import_module
-from os import path, mkdir
+from os import path, mkdir, makedirs
 
 import networkx as nx
 from sklearn.linear_model import LogisticRegression
@@ -22,6 +22,13 @@ from tqdm import tqdm
 
 from kce.evaluate import node_classification_pipeline, link_prediction_pipeline
 from kce.utils import preprocess, downstream_specific_preprocessing
+
+import numpy as np
+import random
+
+def set_reproductible():
+    np.random.seed(0)
+    random.seed(0)
 
 AVAILABLE_EMBEDDERS = {
     "deepwalk": ("kce.embedders.walk_based.deepwalk", "DeepWalk"),
@@ -60,7 +67,7 @@ def instantiate_classifier(multilabel=False):
     Returns:
         sklearn.base.BaseEstimator: The instantiated estimator
     """
-    reglog = LogisticRegression(C=1, multi_class="ovr", solver="liblinear")
+    reglog = LogisticRegression(C=1, multi_class="ovr", solver="liblinear", random_state=0)
     if multilabel:
         return OneVsRestClassifier(reglog)
     return reglog
@@ -78,6 +85,7 @@ def instantiate_embedder(name, params, sub_embedder_name=None, sub_embedder_para
     return embedder
 
 def main(args):
+    set_reproductible()
     error_code = 0
     cfg_path = args.config
     tag = args.tag or '0'
@@ -101,6 +109,7 @@ def main(args):
         embedder_name = cfg["embedder"]
         sub_embedder_name = cfg.get("sub_embedder", None)
         link_pred = cfg["link_pred"]
+        save_embedding = cfg["save_embedding"]
         downstream_task_args = cfg.get("downstream_task_args", {})
 
     else:
@@ -111,8 +120,13 @@ def main(args):
         sub_embedder_name = args.sub_embedder or None
         link_pred = args.link_pred
         downstream_task_args = {}
+        save_embedding = args.save_embedding
+        graph_non_edges = args.graph_non_edges
 
-    assert path.exists(input_path)
+    if not path.exists(output_dir):
+        makedirs(output_dir)
+
+    assert path.exists(input_path), "Unable to retreive data path. Refer to doc"
     assert path.exists(output_dir)
     assert path.isfile(input_path)
     assert path.isdir(output_dir)
@@ -207,14 +221,15 @@ def main(args):
             id2node = embedding_results.pop("id2node")
             node2id = embedding_results.pop("node2id")
 
-            logger.debug("Dumping embeddings...")
-            with open(path.join(output_path, "embeddings", "embeddings_{}.pkl".format(r)), "wb+") as fout:
-                pickle.dump({
-                    "embeddings": embeddings,
-                    "node2id": node2id,
-                    "id2node": id2node
-                }, fout)
-            logger.debug("Done.")
+            if save_embedding:
+                logger.debug("Dumping embeddings...")
+                with open(path.join(output_path, "embeddings", "embeddings_{}.pkl".format(r)), "wb+") as fout:
+                    pickle.dump({
+                        "embeddings": embeddings,
+                        "node2id": node2id,
+                        "id2node": id2node
+                    }, fout)
+                logger.debug("Done.")
 
             logger.info("Classify with base embeddings...")
             embedding_results.update(
@@ -280,6 +295,8 @@ if __name__ == '__main__':
                         help='Path to the .json file containing params for the embedder.')
     parser.add_argument('--link-pred', '-l', metavar='link_pred', type=bool, default=False,
                         help='whether to perform Link prediction instead of node classification.')
+    parser.add_argument('--save_embedding', '-s', metavar='save_embedding', type=bool, default=False,
+                        help='whether to save embeddings along with downstream task results or not.')
     # Parse arguments
     args = parser.parse_args()
     main(args)
