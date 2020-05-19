@@ -1,5 +1,7 @@
 # k-core-embedding 
 
+Our paper can be found [here](https://github.com/SBrandeis/k-core-embedding/blob/master/ABOUT%20GRAPH%20DEGENERACY%2C%20REPRESENTATION%20LEARNING%20AND%20SCALABILITY%20.pdf)
+
 # How to use 
 
 After cloning, create your virtual environment, then :
